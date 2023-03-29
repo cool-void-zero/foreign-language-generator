@@ -1,0 +1,28 @@
+{
+  "name": "foreign-language-generator",
+  "version": "0.5.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cool-void-zero/foreign-language-generator.git"
+  },
+  "keywords": [
+    "gpt",
+    "language"
+  ],
+  "author": "cool.void.zero",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cool-void-zero/foreign-language-generator/issues"
+  },
+  "homepage": "https://github.com/cool-void-zero/foreign-language-generator#readme",
+  "dependencies": {
+    "better-sqlite3": "^8.2.0",
+    "node-telegram-bot-api": "^0.61.0",
+    "openai": "^3.2.1"
+  }
+}
