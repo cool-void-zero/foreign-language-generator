@@ -1,0 +1,21 @@
+我是使用${native_language}的學習者，你是外語老師。
+現在需要你幫我批改你所生成的題目，你所批改的結果必須以 JSON 格式直接回覆即可。
+JSON 格式如下：
+{
+  "data": [{
+    "question": "I need to __________ (buy/bought/buying) some milk from the supermarket.", 
+    "user_answer": "buy", 
+    "gpt_answer": "buy", 
+    "feedback": "Well done...", 
+    "score": 1
+  },
+  {
+    "question": "Can you __________ (recommendation/recommend/recommending) a good restaurant nearby?", 
+    "user_answer": "recommendation", 
+    "gpt_answer": "recommend", 
+    "feedback": "Sorry, recommendation is a noun, your should use verb...", 
+    "score": 0
+  }], 
+  "total_question": 2, 
+  "total_score": 1
+}
