@@ -1,11 +1,12 @@
 const TelegramBot = require('node-telegram-bot-api');
 //	custom class
 const { QuestionGenerator } = require("./QuestionGenerator");
+const { User } = require("./User");
 
 class LanguageBot{
     //  get default generate parameters value
     getDefaultGenerate({
-        native_language = "Chinese",
+        native_language = "English",
         foreign_language = "English", 
         level = "B1", 
         topic = "lexicon",
@@ -13,7 +14,7 @@ class LanguageBot{
         //  number of questions
         numbers = 5, 
     } = {
-        native_language: "Chinese",
+        native_language: "English",
         foreign_language: "English", 
         level: "B1", 
         topic: "lexicon",
@@ -35,112 +36,227 @@ class LanguageBot{
     }){
         this.generator = new QuestionGenerator(openai_api_key, template);
         this.bot = new TelegramBot(telegram_token, { polling: true });
-        this.queue = new Map();
-        this.queue_limit = 5;
-
-        //  
         this.template = template;
+        //  Temporary for storage users generate question
+        this.queue = new Map();
 
         this.bot.on('message', (user_msg) => {
-            const user_chat_id = user_msg.chat.id;
+            //  user message or command
+            const user_id = user_msg.chat.id;
+            const username = user_msg.chat.username;
             let user_cmd = user_msg.text.toLocaleLowerCase();
-
-            console.log(`[${user_chat_id}] user_cmd: ${user_cmd}`);
-
-            if(user_cmd.includes('/generate')){
-                this.generator.generate()
-                    .then(question => {
-                        //  new user (first time use)
-                        if(!this.queue.has(user_chat_id))
-                            this.queue.set(user_chat_id, [question]);
-                        //  push the generate question to the end of specify user
-                        else{
-                            let arr = this.queue.get(user_chat_id) || [];
-
-                            if(arr.length >= this.queue_limit)
-                                arr.shift();
-                            arr.push(question);
-
-                            this.queue.set(user_chat_id, arr);
-                        }
-                        
-                        this.bot.sendMessage(user_chat_id, question);
-                    })
-                    .catch(err => {
-                        //  custom to user, error message
-                        const err_msg = `Fail to call OpenAI GPT API for generate, with "${user_cmd}" command.`;
-                        console.error(err);
-                        console.log(err_msg);
-
-                        this.bot.sendMessage(user_chat_id, err_msg);
-                    });
-            }
-            else if(user_cmd.includes('/solution')){
-                //  don't have this user generate question in queue
-                if(!this.queue.has(user_chat_id))
-                    this.bot.sendMessage(user_chat_id, `You need to generate your question first.`);
-                else{
-                    const answer = user_cmd.split("/solution")[1] || "";
-                    //  get the latest question
-                    const question = this.queue.get(user_chat_id).pop() || "";
+            //  get user setting or status (instantiate current user)
+            let user = new User({ 
+                user_id: user_id, 
+                username: username, 
+            });
+            let user_setting = user.get_setting(user_id);
+            
+            try {
+                //  user still in setting mode
+                if(!user_cmd.includes('/') && user_setting.status.includes('/setting_')){
+                    //  length of the setting mode
+                    const setting_len = user.default_setting.length;
+                    //  setting_column = need to update value of setting column
+                    const { setting_column, index } = user.get_status(user_id);
+                    let options = { ...user_setting };
                     
-                    this.generator.solution({
-                        question: question, 
-                        answer: answer, 
-                    })
-                    .then(feedbacks => {
-                        console.log(`feedbacks: ${feedbacks}`);
+                    options[setting_column] = user_cmd;
+                    options.status = ((index + 1) >= setting_len)? 
+                        '': '/setting_' + (index + 1);
+                    
+                    //  update the user setting
+                    user.update_setting(user_id, options);
 
-                        //  index of '{', for find the JSON format
-                        const index = (feedbacks.indexOf('{') !== -1)? 
-                            feedbacks.indexOf('{'): 0;
-                        const json_str = feedbacks.substring(index);
-                        
-                        //  gpt reply format maybe not with JSON format
-                        try{
-                            const json = JSON.parse(json_str);
-                            const { data, total_question } = json;
-                            //  re-build the reply message
-                            let reply_msg = "";
-                            let arr_score = [];
+                    //  complete setting
+                    if((index + 1) >= setting_len){
+                        user.update_status(user_id, '');
+                        this.bot.sendMessage(user_id, "Complete setting.");
+                    }
+                    else{
+                        const { question } = user.get_status();
+                        this.bot.sendMessage(user_id, question);
+                    }
+                }
+                //  user reply the question
+                else if(!user_cmd.includes('/') && user_setting.status.includes('/generate')){ 
+                    console.log(`reply feedback: `);
+
+                    if(!this.queue.has(user_id))
+                        this.bot.sendMessage(user_id, `You need to generate your question first.`);
+                    else{
+                        const answer = user_cmd;
+                        const question = this.queue.get(user_id);
+
+                        this.generator.solution({
+                            foreign_language: user_setting.foreign_language, 
+                            question: question, 
+                            answer: answer, 
+                        })
+                        .then(json => {
+                            const reply_msg = this.buildFeedback(json);
+                            this.bot.sendMessage(user_id, reply_msg);
                             
-                            console.log(`json: `);
-                            console.log(json);
+                            //  insert feedbacks into database
+                            for(let feedback of json.data){
+                                const options = {
+                                    ...feedback, 
+                                    user_id: user_id, 
+                                    generate_time: new Date().toISOString(), 
+                                    native_language: user_setting.native_language, 
+                                    foreign_language: user_setting.foreign_language, 
+                                }
 
-                            //  count total score and fetch feedback
-                            for(let i=0; i<data.length; i++){
-                                reply_msg += `${i+1}) ${data[i]['gpt_answer']}\n(${data[i]['feedback']})\n`;
-                                arr_score.push(data[i]['score']);
+                                console.log(`[insert_feedback options]: `);
+                                console.log(options);
+
+                                user.insert_feedback(user_id, options);
                             }
+                            
+                            user.update_status(user_id, user_cmd);
+                        });
+                    }
+                }
+                //  user start the setting mode
+                else if(user_cmd.includes('/start') || user_cmd.includes('/setting')){
+                    user.update_status(user_id, '/setting_0');
 
-                            //  count the total score
-                            const total_score = (arr_score.reduce((acc, cur) => acc + cur, 0) || 0) / total_question;
-                            const total_score_str = (total_score * 100).toFixed(2) + " %";
+                    const { question } = user.get_status(user_id);
+                    this.bot.sendMessage(user_id, question);
+                }
+                else if(user_cmd.includes('/generate')){
+                    this.generator.generate(user_setting)
+                        .then(question => {
+                            /*
+                            //  new user (first time use)
+                            if(!this.queue.has(user_id))
+                                this.queue.set(user_id, [question]);
+                            //  push the generate question to the end of specify user
+                            else{
+                                let arr = this.queue.get(user_id) || [];
 
-                            reply_msg += `\n---------------------------${total_score_str} / 100.00 %`;
+                                if(arr.length >= this.queue_limit)
+                                    arr.shift();
+                                arr.push(question);
 
-                            this.bot.sendMessage(user_chat_id, reply_msg);
-                        }
-                        //  unable parse JSON
-                        catch(err){
+                                this.queue.set(user_id, arr);
+                            }
+                            */
+                            
+                            this.queue.set(user_id, question);
+
+                            this.bot.sendMessage(user_id, question);
+                            user.update_status(user_id, user_cmd);
+                        })
+                        .catch(err => {
+                            //  custom to user, error message
+                            const err_msg = `Fail to call OpenAI GPT API for generate, with "${user_cmd}" command.`;
                             console.error(err);
-                            console.log(`Fail to parse string into json.`);
+                            console.log(err_msg);
 
-                            //  direct send the feedback
-                            this.bot.sendMessage(user_chat_id, feedbacks);
-                        }
-                    })
-                    .catch(err => {
-                        //  custom to user, error message
-                        const err_msg = `Fail to call OpenAI GPT API for solution.`;
-                        console.error(err);
-                        console.log(err_msg);
+                            this.bot.sendMessage(user_id, err_msg);
+                        });
+                }
+                /*
+                else if(user_cmd.includes('/solution')){
+                    //  don't have this user generate question in queue
+                    if(!this.queue.has(user_id))
+                        this.bot.sendMessage(user_id, `You need to generate your question first.`);
+                    else{
+                        const answer = user_cmd.split("/solution")[1] || "";
+                        //  get the latest question
+                        const question = this.queue.get(user_id).pop() || "";
+                        
+                        this.generator.solution({
+                            question: question, 
+                            answer: answer, 
+                        })
+                        .then(feedbacks => {
+                            console.log(`feedbacks: ${feedbacks}`);
 
-                        this.bot.sendMessage(user_chat_id, err_msg);
-                    });
-                }       
+                            //  index of '{', for find the JSON format
+                            const index = (feedbacks.indexOf('{') !== -1)? 
+                                feedbacks.indexOf('{'): 0;
+                            const json_str = feedbacks.substring(index);
+                            
+                            //  gpt reply format maybe not with JSON format
+                            try{
+                                const json = JSON.parse(json_str);
+
+                                
+
+                                const { data, total_question } = json;
+                                //  re-build the reply message
+                                let reply_msg = "";
+                                let arr_score = [];
+                                
+                                //  count total score and fetch feedback
+                                for(let i=0; i<data.length; i++){
+                                    reply_msg += `${i+1}) ${data[i]['gpt_answer']}\n(${data[i]['feedback']})\n`;
+                                    arr_score.push(data[i]['score']);
+                                }
+
+                                //  count the total score
+                                const total_score = (arr_score.reduce((acc, cur) => acc + cur, 0) || 0) / total_question;
+                                const total_score_str = (total_score * 100).toFixed(2) + " %";
+
+                                reply_msg += `\n---------------------------${total_score_str} / 100.00 %`;
+
+                                this.bot.sendMessage(user_id, reply_msg);
+                                user.update_status(user_id, user_cmd);
+                            }
+                            //  unable parse JSON
+                            catch(err){
+                                console.error(err);
+                                console.log(`Fail to parse string into json.`);
+
+                                //  direct send the feedback
+                                this.bot.sendMessage(user_id, feedbacks);
+                            }
+                        })
+                        .catch(err => {
+                            //  custom to user, error message
+                            const err_msg = `Fail to call OpenAI GPT API for solution.`;
+                            console.error(err);
+                            console.log(err_msg);
+
+                            this.bot.sendMessage(user_id, err_msg);
+                        });
+                    }       
+                }
+                */
+            }
+            catch(err){
+                console.error(err);
+                console.log(`command error`);
             }
         });
+    }
+
+    buildFeedback(json = {
+        data: [], 
+        total_question: 0, 
+    }){
+        const { data, total_question } = json;
+        //  build the feedback reply message
+        let reply_msg = "";
+        let arr_score = [];
+        
+        //  count total score and fetch feedback
+        for(let i=0; i<data.length; i++){
+            reply_msg += `${i+1}) ${data[i]['gpt_answer']}\n(${data[i]['feedback']})\n`;
+            arr_score.push(data[i]['score']);
+        }
+
+        //  count the total score
+        const total_score = (arr_score.reduce((acc, cur) => acc + cur, 0) || 0) / total_question;
+        const total_score_str = (total_score * 100).toFixed(2) + " %";
+
+        reply_msg += `\n---------------------------${total_score_str} / 100.00 %`;
+
+        return reply_msg;
+        // this.bot.sendMessage(user_id, reply_msg);
+        // user.update_status(user_id, user_cmd);
     }
 
     //  config template, replace parameters to value
@@ -156,7 +272,7 @@ class LanguageBot{
     }
 
     //  send the daily challenge to user
-    daily_challenge(chat_id = 2040563117, options = this.getDefaultGenerate()){
+    daily_challenge(chat_id = 0, options = this.getDefaultGenerate()){
         // let template = this.configTemplate();
         
         this.generator.generate(options)

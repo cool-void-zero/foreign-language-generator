@@ -8,11 +8,12 @@
     [√] check answer and feedback
     [√] translate template prompt from Chinese to English
     [√] build sqlite table
+    [√] Telegram user can custom setting 
+        (native language, foreign language, question number)
     
     -----------------------------------------------------------------------------
 
-    [] Telegram user can custom setting 
-        (native language, foreign language, default: question number, topic, type)
+    [] fix insert [feedbacks] not includes time
     [] Telegram custom command
     [] setting fixed schedule send questions to user (receive) for daily practice
 
@@ -29,6 +30,6 @@ const bot = new LanguageBot({
     ...setting.config, 
 });
 
-setInterval(() => bot.daily_challenge(), 10 * 1000);
+// setInterval(() => bot.daily_challenge(), 10 * 1000);
 
 console.log(`Your Telegram Bot running...`);

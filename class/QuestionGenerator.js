@@ -117,11 +117,22 @@ class QuestionGenerator{
                 });
 
                 const solution_content = completion.data.choices[0].message.content;
-                resolve(solution_content);
-            }catch(err){
-                reject(err);
-            }
+                // resolve(solution_content);
 
+                //  index of '{', for find the JSON format
+                const index = (solution_content.indexOf('{') !== -1)? 
+                    solution_content.indexOf('{'): 0;
+                const json_str = solution_content.substring(index);
+                //  
+                const json = JSON.parse(json_str);
+                resolve(json);
+            }catch(err){
+                // reject(err);
+                console.error(err);
+                console.log(`[generator solution] Fail to call API or parse json string.`);
+                
+                resolve([]);
+            }
         });
     }
 }
