@@ -113,9 +113,9 @@ class LanguageBot{
 
                                     user.insert_feedback(user_id, options);
                                 }
+
+                                user.update_status(user_id, user_cmd);
                             }
-                            
-                            user.update_status(user_id, user_cmd);
                         });
                     }
                 }

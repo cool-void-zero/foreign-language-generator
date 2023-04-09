@@ -4,17 +4,17 @@ feedback 內容必須以 ${native_language} 語言來生成，並且盡可能詳
 JSON 格式如下：
 {
   "data": [{
-    "question": "I need to __________ (buy/bought/buying) some milk from the supermarket.", 
-    "user_answer": "buy", 
-    "gpt_answer": "buy", 
-    "feedback": "{your_generate_feedback}", 
+    "question": "以下哪個句子是正確的疑問句？\na. She is likes pizza?\nb. Does she likes pizza?\nc. She likes pizza?", 
+    "user_answer": "B", 
+    "gpt_answer": "B", 
+    "feedback": "Correct, {your_generate_feedback}", 
     "score": 1
   },
   {
-    "question": "Can you __________ (recommendation/recommend/recommending) a good restaurant nearby?", 
-    "user_answer": "recommendation", 
-    "gpt_answer": "recommend", 
-    "feedback": "{your_generate_feedback}", 
+    "question": "以下哪個句子符合現在完成式？\na. I am going to the store yesterday.\nb. I have gone to the store yesterday.\nc. I will go to the store tomorrow.", 
+    "user_answer": "A", 
+    "gpt_answer": "B", 
+    "feedback": Wrong, "{your_generate_feedback}", 
     "score": 0
   }], 
   "total_question": 2, 

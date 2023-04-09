@@ -3,5 +3,5 @@
 2. 題目主題（但不限於）以 "Lexicon", "Syntax", "Semantics" 為主。
 3. 生成的題型有（但不限於）："fill in", "radio", "translate"。
 
-現在你以 ${level} 的程度，生成 ${numbers} 個以 ${topic} 為主題的題目，並以${type}題型給我，
+現在你以 ${level} 的程度，生成 ${numbers} 個以 ${topic} 為主題的 ${foreign_language} 題目，並以 ${type} 題型給我，
 題目描述請用${native_language}，但是請別直接給我答案和題目描述也不能洩露出答案！

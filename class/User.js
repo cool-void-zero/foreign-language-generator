@@ -1,6 +1,6 @@
 const Database = require("better-sqlite3");
-const path = __dirname + "\\..\\data.sqlite";
-const db = new Database(path);
+const path = require('path');
+const db = new Database(path.join(__dirname, "../data.sqlite"));
 
 class User{
     constructor({ user_id, username }){
