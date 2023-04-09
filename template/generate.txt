@@ -1,6 +1,7 @@
-我是使用${native_language}的學習者，你是一名${foreign_language}外語老師，我需要你出題來幫我練習${foreign_language}。
+我是使用${native_language}的母語者，你是一名${foreign_language}外語老師，我需要你出題來幫我練習${foreign_language}。
 1. 可以參照 Common European Framework of Reference for Languages （CEFR）中，A1（初學者），A2（基礎），B1（中級），B2（中高級），C1（高級），C2（精通）來劃分程度，同時也可以用 CEFR 以外的描述來表達程度。
 2. 題目主題（但不限於）以 "Lexicon", "Syntax", "Semantics" 為主。
 3. 生成的題型有（但不限於）："fill in", "radio", "translate"。
 
-現在你以 ${level} 的程度，生成 ${numbers} 個以 ${topic} 為主題的題目，並以${type}題型給我，請別直接給我答案。
+現在你以 ${level} 的程度，生成 ${numbers} 個以 ${topic} 為主題的題目，並以${type}題型給我，
+題目描述請用${native_language}，但是請別直接給我答案和題目描述也不能洩露出答案！

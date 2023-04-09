@@ -116,6 +116,16 @@ class User{
         //  prepare update users_setting
         const update_setting = db.prepare(update_query);
         db.transaction(() => update_setting.run(options))();
+        
+        //  if languages_levels not exits, insert it
+        const insert_query = db.prepare(`
+            INSERT OR IGNORE INTO languages_levels ([language], [level])
+            VALUES (@language, @level);
+        `);
+        db.transaction(() => insert_query.run({
+            language: options.foreign_language, 
+            level: options.level, 
+        }))();
     }
 
     /**
@@ -166,32 +176,28 @@ class User{
         }))();
     }
 
-    /*
-        [score_id] 
-        [user_id] 
-        [generate_time] 
-        [native_language] 
-        [foreign_language] 
-        [question] 
-        [user_answer] 
-        [gpt_answer] 
-        [feedback] 
-        [score] 
-    */
+    /**
+     *  insert feedback by user reply to the question 
+     * 
+     * @param {int} user_id 
+     * @param {object} options 
+     */
     insert_feedback(user_id, options){
         const insert = db.prepare(`
             INSERT INTO feedbacks(
-                [user_id], [native_language], [foreign_language], 
+                [user_id], [generate_time], 
+                [native_language], [foreign_language], 
                 [question], [user_answer], [gpt_answer], 
                 [feedback], [score] 
             )
             VALUES(
-                @user_id, @native_language, @foreign_language, 
+                @user_id, @generate_time, 
+                @native_language, @foreign_language, 
                 @question, @user_answer, @gpt_answer, 
                 @feedback, @score
             )
         `);
-
+        
         db.transaction(() => insert.run({
             user_id: user_id, 
             ...options

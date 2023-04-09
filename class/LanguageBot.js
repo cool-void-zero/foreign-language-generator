@@ -9,7 +9,7 @@ class LanguageBot{
         native_language = "English",
         foreign_language = "English", 
         level = "B1", 
-        topic = "lexicon",
+        topic = "general",
         type = "radio", 
         //  number of questions
         numbers = 5, 
@@ -17,7 +17,7 @@ class LanguageBot{
         native_language: "English",
         foreign_language: "English", 
         level: "B1", 
-        topic: "lexicon",
+        topic: "general",
         type: "radio", 
         numbers: 5, 
     }){
@@ -80,8 +80,6 @@ class LanguageBot{
                 }
                 //  user reply the question
                 else if(!user_cmd.includes('/') && user_setting.status.includes('/generate')){ 
-                    console.log(`reply feedback: `);
-
                     if(!this.queue.has(user_id))
                         this.bot.sendMessage(user_id, `You need to generate your question first.`);
                     else{
@@ -89,6 +87,7 @@ class LanguageBot{
                         const question = this.queue.get(user_id);
 
                         this.generator.solution({
+                            native_language: user_setting.native_language, 
                             foreign_language: user_setting.foreign_language, 
                             question: question, 
                             answer: answer, 
@@ -97,20 +96,23 @@ class LanguageBot{
                             const reply_msg = this.buildFeedback(json);
                             this.bot.sendMessage(user_id, reply_msg);
                             
-                            //  insert feedbacks into database
-                            for(let feedback of json.data){
-                                const options = {
-                                    ...feedback, 
-                                    user_id: user_id, 
-                                    generate_time: new Date().toISOString(), 
-                                    native_language: user_setting.native_language, 
-                                    foreign_language: user_setting.foreign_language, 
+                            if(json.data.length){
+                                //  insert feedbacks into database
+                                const generate_time = new Date().toISOString();
+                                for(let feedback of json.data){
+                                    const options = {
+                                        ...feedback, 
+                                        user_id: user_id, 
+                                        generate_time: generate_time, 
+                                        native_language: user_setting.native_language, 
+                                        foreign_language: user_setting.foreign_language, 
+                                    }
+
+                                    console.log(`[feedback options]`);
+                                    console.log(options);
+
+                                    user.insert_feedback(user_id, options);
                                 }
-
-                                console.log(`[insert_feedback options]: `);
-                                console.log(options);
-
-                                user.insert_feedback(user_id, options);
                             }
                             
                             user.update_status(user_id, user_cmd);
@@ -127,22 +129,6 @@ class LanguageBot{
                 else if(user_cmd.includes('/generate')){
                     this.generator.generate(user_setting)
                         .then(question => {
-                            /*
-                            //  new user (first time use)
-                            if(!this.queue.has(user_id))
-                                this.queue.set(user_id, [question]);
-                            //  push the generate question to the end of specify user
-                            else{
-                                let arr = this.queue.get(user_id) || [];
-
-                                if(arr.length >= this.queue_limit)
-                                    arr.shift();
-                                arr.push(question);
-
-                                this.queue.set(user_id, arr);
-                            }
-                            */
-                            
                             this.queue.set(user_id, question);
 
                             this.bot.sendMessage(user_id, question);
@@ -157,74 +143,6 @@ class LanguageBot{
                             this.bot.sendMessage(user_id, err_msg);
                         });
                 }
-                /*
-                else if(user_cmd.includes('/solution')){
-                    //  don't have this user generate question in queue
-                    if(!this.queue.has(user_id))
-                        this.bot.sendMessage(user_id, `You need to generate your question first.`);
-                    else{
-                        const answer = user_cmd.split("/solution")[1] || "";
-                        //  get the latest question
-                        const question = this.queue.get(user_id).pop() || "";
-                        
-                        this.generator.solution({
-                            question: question, 
-                            answer: answer, 
-                        })
-                        .then(feedbacks => {
-                            console.log(`feedbacks: ${feedbacks}`);
-
-                            //  index of '{', for find the JSON format
-                            const index = (feedbacks.indexOf('{') !== -1)? 
-                                feedbacks.indexOf('{'): 0;
-                            const json_str = feedbacks.substring(index);
-                            
-                            //  gpt reply format maybe not with JSON format
-                            try{
-                                const json = JSON.parse(json_str);
-
-                                
-
-                                const { data, total_question } = json;
-                                //  re-build the reply message
-                                let reply_msg = "";
-                                let arr_score = [];
-                                
-                                //  count total score and fetch feedback
-                                for(let i=0; i<data.length; i++){
-                                    reply_msg += `${i+1}) ${data[i]['gpt_answer']}\n(${data[i]['feedback']})\n`;
-                                    arr_score.push(data[i]['score']);
-                                }
-
-                                //  count the total score
-                                const total_score = (arr_score.reduce((acc, cur) => acc + cur, 0) || 0) / total_question;
-                                const total_score_str = (total_score * 100).toFixed(2) + " %";
-
-                                reply_msg += `\n---------------------------${total_score_str} / 100.00 %`;
-
-                                this.bot.sendMessage(user_id, reply_msg);
-                                user.update_status(user_id, user_cmd);
-                            }
-                            //  unable parse JSON
-                            catch(err){
-                                console.error(err);
-                                console.log(`Fail to parse string into json.`);
-
-                                //  direct send the feedback
-                                this.bot.sendMessage(user_id, feedbacks);
-                            }
-                        })
-                        .catch(err => {
-                            //  custom to user, error message
-                            const err_msg = `Fail to call OpenAI GPT API for solution.`;
-                            console.error(err);
-                            console.log(err_msg);
-
-                            this.bot.sendMessage(user_id, err_msg);
-                        });
-                    }       
-                }
-                */
             }
             catch(err){
                 console.error(err);
@@ -237,6 +155,8 @@ class LanguageBot{
         data: [], 
         total_question: 0, 
     }){
+        if(json.data.length === 0) return "Fail to call API or parse json string.";
+
         const { data, total_question } = json;
         //  build the feedback reply message
         let reply_msg = "";
@@ -252,18 +172,17 @@ class LanguageBot{
         const total_score = (arr_score.reduce((acc, cur) => acc + cur, 0) || 0) / total_question;
         const total_score_str = (total_score * 100).toFixed(2) + " %";
 
-        reply_msg += `\n---------------------------${total_score_str} / 100.00 %`;
+        // reply_msg += `\n---------------------------${total_score_str} / 100.00 %`;
+        reply_msg += `\n\n${total_score_str} (for reference only)`;
 
         return reply_msg;
-        // this.bot.sendMessage(user_id, reply_msg);
-        // user.update_status(user_id, user_cmd);
     }
 
     //  config template, replace parameters to value
     //  ex: ${level} → B1
     configTemplate(template = this.template.generate, options = this.getDefaultGenerate()){
         for(let prop in options){
-             let regexp = new RegExp("\\${" + prop + "}", "gi");
+            let regexp = new RegExp("\\${" + prop + "}", "gi");
             
             template = template.replace(regexp, options[prop]);
         }

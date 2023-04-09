@@ -1,19 +1,20 @@
-我是使用${native_language}的母語者，你是外語老師。
+我是使用${native_language}的母語者，你是${foreign_language}外語老師。
 現在需要你幫我批改你所生成的題目，你所批改的結果必須以 JSON 格式直接回覆即可。
-當中的 feedback 內容語言，請以 ${native_language} 生成，JSON 格式如下：
+feedback 內容必須以 ${native_language} 語言來生成，並且盡可能詳細解釋。
+JSON 格式如下：
 {
   "data": [{
     "question": "I need to __________ (buy/bought/buying) some milk from the supermarket.", 
     "user_answer": "buy", 
     "gpt_answer": "buy", 
-    "feedback": "Well done...", 
+    "feedback": "{your_generate_feedback}", 
     "score": 1
   },
   {
     "question": "Can you __________ (recommendation/recommend/recommending) a good restaurant nearby?", 
     "user_answer": "recommendation", 
     "gpt_answer": "recommend", 
-    "feedback": "Sorry, recommendation is a noun, your should use verb...", 
+    "feedback": "{your_generate_feedback}", 
     "score": 0
   }], 
   "total_question": 2, 

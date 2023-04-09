@@ -35,6 +35,16 @@ class QuestionGenerator{
         this.model = model;
     }
 
+    configTemplate(template = "", options = {}){
+        for(let prop in options){
+            let regexp = new RegExp("\\${" + prop + "}", "gi");
+            
+            template = template.replace(regexp, options[prop]);
+        }
+
+        return template;
+    }
+
     //  lexicon[詞彙], syntax[語法], semantics[語義]
     //  fill in[填充], radio[單選], translate[翻譯]
     generate({
@@ -53,20 +63,16 @@ class QuestionGenerator{
         type: "radio", 
         numbers: 5, 
     }){
-        let system_template = this.template.generate;
-        let options = {
+        const system_template = this.configTemplate(this.template.generate, {
             native_language: native_language, 
             foreign_language: foreign_language, 
             level: level, 
             topic: topic, 
             type: type, 
             numbers: numbers, 
-        }
+        });
 
-        for(let prop in options)
-            system_template = system_template.replace("${" + prop + "}", options[prop]);
-
-        console.log(`Final system_template: `);
+        console.log(`[Generate] Final system_template: `);
         console.log(system_template);
 
         return new Promise(async (resolve, reject) => {
@@ -90,11 +96,19 @@ class QuestionGenerator{
     }
 
     solution({
+        native_language = "English", 
         foreign_language = "English", 
         question = "", 
         answer = "", 
     }){
-        const system_template = this.template.solution.replace("${foreign_language}", foreign_language);
+        // const system_template = this.template.solution.replace("${foreign_language}", foreign_language);
+        const system_template = this.configTemplate(this.template.solution, {
+            native_language: native_language, 
+            foreign_language: foreign_language, 
+        });
+
+        console.log(`[Solution] Final system_template: `);
+        console.log(system_template);
 
         return new Promise(async (resolve, reject) => {
             try {
@@ -117,8 +131,7 @@ class QuestionGenerator{
                 });
 
                 const solution_content = completion.data.choices[0].message.content;
-                // resolve(solution_content);
-
+                
                 //  index of '{', for find the JSON format
                 const index = (solution_content.indexOf('{') !== -1)? 
                     solution_content.indexOf('{'): 0;
@@ -131,7 +144,10 @@ class QuestionGenerator{
                 console.error(err);
                 console.log(`[generator solution] Fail to call API or parse json string.`);
                 
-                resolve([]);
+                resolve({
+                    data: [], 
+                    total_question: 0, 
+                });
             }
         });
     }
