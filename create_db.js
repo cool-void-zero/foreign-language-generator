@@ -14,7 +14,7 @@ db.exec(`
         [status] TEXT DEFAULT '/setting', 
         [foreign_language] TEXT DEFAULT 'English', 
         [level] TEXT DEFAULT 'A1', 
-        [topic] TEXT DEFAULT 'grammar', 
+        [topic] TEXT DEFAULT 'mix', 
         [type] TEXT DEFAULT 'radio', 
         [numbers] INTEGER DEFAULT 5, 
         [daily_challenge] TEXT DEFAULT '09', 

@@ -119,8 +119,32 @@ class LanguageBot{
                         });
                     }
                 }
+                //  user first time or review introduction
+                else if(user_cmd.includes('/start')){
+                    const reply_msg = `
+Here are foreign language questions that can be generated and provided for practice with GPT (3.5-turbo) API.
+
+Default will refer “CEFR” to classify the level:
+A1 (beginner), A2 (basic), B1 (intermediate), B2 (upper-intermediate), C1 (advanced), C2 (proficient)
+You also can express which level using descriptions.
+
+Now you can use /setting to setup your default configuration.
+                    `;
+
+                    const options = {
+                        reply_markup: {
+                            keyboard: [
+                                ['/setting', '/generate', '/help']
+                            ],
+                            resize_keyboard: true,
+                            one_time_keyboard: true,
+                        },
+                    };
+
+                    this.bot.sendMessage(user_id, reply_msg, options);
+                }
                 //  user start the setting mode
-                else if(user_cmd.includes('/start') || user_cmd.includes('/setting')){
+                else if(user_cmd.includes('/setting')){
                     user.update_status(user_id, '/setting_0');
 
                     const { question } = user.get_status(user_id);
@@ -142,6 +166,24 @@ class LanguageBot{
 
                             this.bot.sendMessage(user_id, err_msg);
                         });
+                }
+                else if(user_cmd.includes('/help')){
+                    const reply_msg = `
+    /start - Start introducing this channel.
+    /generate - Generate question by setting.
+    /review - Review the previous questions.
+    /setting - Set default profile settings.
+    /profile - Check your profile settings.
+    /help - Help of the command list.
+                    `;
+
+                    this.bot.sendMessage(user_id, reply_msg);
+                }
+                //  waiting coding...
+                else if(user_cmd.includes('/review') || user_cmd.includes('/profile')){
+                    const reply_msg = `🏗️ Will be available in the future...`;
+                    
+                    this.bot.sendMessage(user_id, reply_msg);
                 }
             }
             catch(err){
