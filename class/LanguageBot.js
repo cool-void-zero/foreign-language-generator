@@ -125,7 +125,9 @@ class LanguageBot{
 Here are foreign language questions that can be generated and provided for practice with GPT (3.5-turbo) API.
 
 Default will refer “CEFR” to classify the level:
-A1 (beginner), A2 (basic), B1 (intermediate), B2 (upper-intermediate), C1 (advanced), C2 (proficient)
+A1 (beginner), A2 (basic), 
+B1 (intermediate), B2 (upper-intermediate), 
+C1 (advanced), C2 (proficient)
 You also can express which level using descriptions.
 
 Now you can use /setting to setup your default configuration.
@@ -169,12 +171,12 @@ Now you can use /setting to setup your default configuration.
                 }
                 else if(user_cmd.includes('/help')){
                     const reply_msg = `
-    /start - Start introducing this channel.
-    /generate - Generate question by setting.
-    /review - Review the previous questions.
-    /setting - Set default profile settings.
-    /profile - Check your profile settings.
-    /help - Help of the command list.
+/start - Start introducing this channel.
+/generate - Generate question by setting.
+/review - Review the previous questions.
+/setting - Set default profile settings.
+/profile - Check your profile settings.
+/help - Help of the command list.
                     `;
 
                     this.bot.sendMessage(user_id, reply_msg);
